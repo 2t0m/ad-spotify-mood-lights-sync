@@ -44,6 +44,10 @@ class SpotifyMoodLightsSync(hass.Hass):
         if not self.light:
             self.error("'light' not specified in app config", level='WARNING')
         self.initial_light_state = None
+        
+        self.tempo = self.args.get('tempo')
+        if not self.tempo:
+            self.error("'tempo' not specified in app config", level='WARNING')
 
         # setup spotify component
         client_id = self.args.get('client_id')
@@ -168,6 +172,7 @@ class SpotifyMoodLightsSync(hass.Hass):
     def sync_light(self, track_uri: str) -> None:
         try:
             color = self.color_from_uri(track_uri)
+            tempo = self.tempo_from_uri(track_uri)
         except ConnectionError as e:
             self.error(f"Could not reach Spotify API, skipping track. Reason: {e}", level='WARNING')
             return
@@ -182,6 +187,8 @@ class SpotifyMoodLightsSync(hass.Hass):
             return
 
         self.turn_on(self.light, **{'rgb_color': color})
+        
+        self.set_state(self.tempo, state=tempo)
 
     def color_from_uri(self, track_uri: str) -> Color:
         """Get the color from a spotify track uri."""
@@ -197,6 +204,19 @@ class SpotifyMoodLightsSync(hass.Hass):
         self.log(f"Got color {color} for valence {valence} and energy {energy} in track '{track_uri}'", level='DEBUG')
 
         return color
+    
+    def tempo_from_uri(self, track_uri: str) -> float:
+        """Get the color from a spotify track uri."""
+
+        track_features = self.call_api(partial(self.sp.audio_features, track_uri))[0]
+        if not track_features:
+            raise ValueError("no track features found for uri")
+
+        tempo: float = track_features['tempo']
+
+        self.log(f"Got tempo {tempo} in track '{track_uri}'", level='DEBUG')
+
+        return tempo
 
     def color_for_point(self, point: Point) -> Color:
         """Computes an RGB color value for a point on the color plane.
