@@ -51,6 +51,7 @@ spotify_mood_lights_sync:
   client_secret: !secret spotify_client_secret
   media_player: media_player.spotify_johndoe
   light: light.bedroom
+  tempo: input_number.spotify_tempo
 ```
 
 ## Media Players
